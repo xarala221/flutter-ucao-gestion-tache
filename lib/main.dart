@@ -3,9 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 const firebaseOptions = FirebaseOptions(
-  appId: 'votre app id',
-  apiKey: 'votre api key',
-  projectId: 'votre projet id',
+  appId: 'a changer',
+  apiKey: 'a changer',
+  projectId: 'a changer',
   messagingSenderId: '...',
   authDomain: '...',
 );
@@ -13,38 +13,28 @@ const firebaseOptions = FirebaseOptions(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: firebaseOptions);
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gestion tache',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Applciation de gestion de taches'),
+      title: 'Gestion de tache',
+      home: ListeTache(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
-
+class ListeTache extends StatefulWidget {
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _ListeTacheState createState() => _ListeTacheState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _ListeTacheState extends State<ListeTache> {
   final _controllerLeText = TextEditingController();
+  final _controllerLaDescription = TextEditingController();
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-  final List<Tache> taches = [];
 
   void _ajouterTache() {
     DocumentReference ref = firestore.collection("taches").doc();
@@ -52,6 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       firestore.collection("taches").add({
         "titre": _controllerLeText.text,
+        "description": _controllerLaDescription.text,
         "complete": false,
         "id": myId,
       });
@@ -64,74 +55,83 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text(widget.title),
+          title: Text('Gestion tache'),
+          backgroundColor: Colors.amber,
         ),
         body: Column(
           children: [
             TextField(
               controller: _controllerLeText,
-              onSubmitted: (valeur) {
-                _ajouterTache();
-              },
               decoration: InputDecoration(
-                  labelText: "Ajouter une tache",
+                  labelText: "Titre",
+                  labelStyle: TextStyle(color: Colors.amber),
                   contentPadding: EdgeInsets.all(10)),
             ),
-            Padding(padding: EdgeInsets.only(top: 10)),
-            TextButton(
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: EdgeInsets.all(20),
-              ),
-              child:
-                  Text("Ajouter tache", style: TextStyle(color: Colors.white)),
-              onPressed: _ajouterTache,
+            TextField(
+              controller: _controllerLaDescription,
+              decoration: InputDecoration(
+                  labelText: "Description",
+                  labelStyle: TextStyle(color: Colors.amber),
+                  contentPadding: EdgeInsets.all(10)),
+              onSubmitted: (value) {
+                _ajouterTache();
+              },
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: firestore.collection('taches').snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Text('Something went wrong');
+                    return Text("Une erreur s'est produite");
                   }
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Text("Loading");
-                  }
-                  return ListView(
-                    children:
-                        snapshot.data!.docs.map((DocumentSnapshot document) {
-                      Map<String, dynamic> data =
-                          document.data()! as Map<String, dynamic>;
-                      return Container(
-                        height: 100,
-                        margin: const EdgeInsets.only(bottom: 15.0),
-                        child: ListTile(
-                          title: Text(
-                            data["titre"],
-                            style: TextStyle(
-                              decoration: data['complete']
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  if (!snapshot.hasData) return const Text('Chargement...');
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) =>
+                        _buildListItem(context, snapshot.data!.docs[index]),
                   );
                 },
               ),
-            )
+            ),
           ],
-        )
-        // This trailing comma makes auto-formatting nicer for build methods.
-        );
+        ));
+  }
+
+  Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
+    final tache = Tache(
+        titre: document['titre'],
+        complete: document['complete'],
+        description: document['description']);
+
+    return ListTile(
+      title: Text(tache.titre,
+          style: TextStyle(
+            decoration: tache.complete
+                ? TextDecoration.lineThrough
+                : TextDecoration.none,
+          )),
+      subtitle: Text(tache.description),
+      trailing: Checkbox(
+        value: tache.complete,
+        onChanged: (value) {
+          setState(() {
+            tache.complete = value ?? true;
+          });
+          firestore
+              .collection("taches")
+              .doc(document.reference.id)
+              .update({'complete': tache.complete});
+        },
+      ),
+    );
   }
 }
 
 class Tache {
   String titre;
+  String description;
   bool complete;
 
-  Tache(this.titre, this.complete);
+  Tache(
+      {required this.titre, required this.description, this.complete = false});
 }
