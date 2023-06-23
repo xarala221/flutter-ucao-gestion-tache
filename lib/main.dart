@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+const firebaseOptions = FirebaseOptions(
+  appId: 'votre app id',
+  apiKey: 'votre api key',
+  projectId: 'votre projet id',
+  messagingSenderId: '...',
+  authDomain: '...',
+);
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: firebaseOptions);
   runApp(const MyApp());
 }
 
@@ -30,76 +42,90 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final _controllerLeText = TextEditingController();
-  bool _error = false;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   final List<Tache> taches = [];
 
   void _ajouterTache() {
-    if (_controllerLeText.text.length > 0) {
-      setState(() {
-        taches.add(Tache(_controllerLeText.text, false));
+    DocumentReference ref = firestore.collection("taches").doc();
+    String myId = ref.id;
+    setState(() {
+      firestore.collection("taches").add({
+        "titre": _controllerLeText.text,
+        "complete": false,
+        "id": myId,
       });
-      _controllerLeText.text = "";
-    } else {
-      setState(() {
-        _error = true;
-      });
-    }
+      // taches.add(Tache(_controllerLeText.text, false));
+    });
+    _controllerLeText.text = "";
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Column(
-        children: <Widget>[
-          TextField(
-            controller: _controllerLeText,
-            onSubmitted: (valeur) {
-              _ajouterTache();
-            },
-            decoration: InputDecoration(
-                labelText: "Ajouter une tache",
-                contentPadding: EdgeInsets.all(10)),
-          ),
-          Padding(padding: EdgeInsets.only(top: 10)),
-          TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: EdgeInsets.all(20),
+        appBar: AppBar(
+          title: Text(widget.title),
+        ),
+        body: Column(
+          children: [
+            TextField(
+              controller: _controllerLeText,
+              onSubmitted: (valeur) {
+                _ajouterTache();
+              },
+              decoration: InputDecoration(
+                  labelText: "Ajouter une tache",
+                  contentPadding: EdgeInsets.all(10)),
             ),
-            child: Text("Ajouter tache", style: TextStyle(color: Colors.white)),
-            onPressed: _ajouterTache,
-          ),
-          Expanded(
-              child: ListView.builder(
-            itemCount: taches.length,
-            itemBuilder: (context, index) {
-              return CheckboxListTile(
-                value: taches[index].complete,
-                onChanged: (bool? value) {
-                  setState(() {
-                    taches[index].complete = value ?? true;
-                  });
-                },
-                title: Text(
-                  taches[index].titre,
-                  style: TextStyle(
-                    decoration: taches[index].complete
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                  ),
-                ),
-              );
-            },
-          )),
-        ],
-      ),
+            Padding(padding: EdgeInsets.only(top: 10)),
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: EdgeInsets.all(20),
+              ),
+              child:
+                  Text("Ajouter tache", style: TextStyle(color: Colors.white)),
+              onPressed: _ajouterTache,
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: firestore.collection('taches').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Text('Something went wrong');
+                  }
 
-      // This trailing comma makes auto-formatting nicer for build methods.
-    );
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Text("Loading");
+                  }
+                  return ListView(
+                    children:
+                        snapshot.data!.docs.map((DocumentSnapshot document) {
+                      Map<String, dynamic> data =
+                          document.data()! as Map<String, dynamic>;
+                      return Container(
+                        height: 100,
+                        margin: const EdgeInsets.only(bottom: 15.0),
+                        child: ListTile(
+                          title: Text(
+                            data["titre"],
+                            style: TextStyle(
+                              decoration: data['complete']
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            )
+          ],
+        )
+        // This trailing comma makes auto-formatting nicer for build methods.
+        );
   }
 }
 

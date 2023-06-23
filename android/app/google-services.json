@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "669298503269",
+    "project_id": "gestion-tache-84f85",
+    "storage_bucket": "gestion-tache-84f85.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:669298503269:android:ca4c3285c651a36dc9a08c",
+        "android_client_info": {
+          "package_name": "com.example.premier_projet_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "669298503269-u9akjpv32p247nl5b8gritamfd3itc9u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUwyKZghF-znSmO1hkoXg2aG5_uVB8wxk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "669298503269-u9akjpv32p247nl5b8gritamfd3itc9u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
